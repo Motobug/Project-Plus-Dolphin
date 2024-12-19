@@ -50,6 +50,7 @@ struct SConfig
   bool bJITNoBlockLinking = false;
 
   bool bCopyWiiSaveNetplay = true;
+  bool bBrawlMusicOff = true;
 
   DiscIO::Region m_region;
 

@@ -241,6 +241,8 @@ void NetPlayDialog::CreateMainLayout()
   m_golf_mode_overlay_action->setCheckable(true);
   m_hide_remote_gbas_action = m_other_menu->addAction(tr("Hide Remote GBAs"));
   m_hide_remote_gbas_action->setCheckable(true);
+  m_brawlmusic_off_action = m_other_menu->addAction(tr("Client Side Music Off"));
+  m_brawlmusic_off_action->setCheckable(true);
 
   m_game_button->setDefault(false);
   m_game_button->setAutoDefault(false);
@@ -436,6 +438,7 @@ void NetPlayDialog::ConnectWidgets()
   connect(m_golf_mode_overlay_action, &QAction::toggled, this, &NetPlayDialog::SaveSettings);
   connect(m_fixed_delay_action, &QAction::toggled, this, &NetPlayDialog::SaveSettings);
   connect(m_hide_remote_gbas_action, &QAction::toggled, this, &NetPlayDialog::SaveSettings);
+  connect(m_brawlmusic_off_action, &QAction::toggled, this, &NetPlayDialog::SaveSettings);
 }
 
 void NetPlayDialog::SendMessage(const std::string& msg)
@@ -445,6 +448,15 @@ void NetPlayDialog::SendMessage(const std::string& msg)
   DisplayMessage(
       QStringLiteral("%1: %2").arg(QString::fromStdString(m_nickname), QString::fromStdString(msg)),
       "");
+}
+
+
+bool NetPlayDialog::IsMusicOff()
+{
+  std::optional<bool> brawlmusic_off = RunOnObject(m_brawlmusic_off_action, &QAction::isChecked);
+  if (brawlmusic_off)
+    return *brawlmusic_off;
+  return false;
 }
 
 void NetPlayDialog::OnChat()
@@ -880,6 +892,7 @@ void NetPlayDialog::SetOptionsEnabled(bool enabled)
     m_host_input_authority_action->setEnabled(enabled);
     m_golf_mode_action->setEnabled(enabled);
     m_fixed_delay_action->setEnabled(enabled);
+	m_brawlmusic_off_action->setEnabled(enabled);
   }
 
   m_record_input_action->setEnabled(enabled);

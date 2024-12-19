@@ -95,6 +95,7 @@ bool BootCore(Core::System& system, std::unique_ptr<BootParameters> boot,
 
     Config::AddLayer(ConfigLoaders::GenerateNetPlayConfigLoader(*netplay_settings));
     StartUp.bCopyWiiSaveNetplay = netplay_settings->savedata_load;
+	StartUp.bBrawlMusicOff = netplay_settings->brawlmusic_off;
   }
 
   // Override out-of-region languages/countries to prevent games from crashing or behaving oddly

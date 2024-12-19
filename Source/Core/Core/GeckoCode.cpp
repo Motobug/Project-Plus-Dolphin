@@ -18,9 +18,12 @@
 #include "Core/Config/MainSettings.h"
 #include "Core/Core.h"
 #include "Core/Host.h"
+#include "Core/NetPlayProto.h"
 #include "Core/PowerPC/MMU.h"
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/System.h"
+
+#include <iostream>
 
 namespace Gecko
 {

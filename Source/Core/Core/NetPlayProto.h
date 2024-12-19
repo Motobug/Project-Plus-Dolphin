@@ -46,6 +46,7 @@ struct NetSettings
   DiscIO::Region fallback_region{};
   bool allow_sd_writes = false;
   bool oc_enable = false;
+  bool brawlmusic_off = false;
   float oc_factor = 0;
   Common::EnumMap<ExpansionInterface::EXIDeviceType, ExpansionInterface::MAX_SLOT> exi_device{};
   int memcard_size_override = -1;

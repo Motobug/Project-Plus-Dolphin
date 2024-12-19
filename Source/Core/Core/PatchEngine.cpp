@@ -28,6 +28,7 @@
 #include "Core/CheatCodes.h"
 #include "Core/Config/SessionSettings.h"
 #include "Core/ConfigManager.h"
+#include "DolphinQT/NetPlay/NetPlayDialog.h"
 #include "Core/Core.h"
 #include "Core/Debugger/PPCDebugInterface.h"
 #include "Core/GeckoCode.h"
@@ -97,6 +98,24 @@ std::string SerializeLine(const PatchEntry& entry)
     return fmt::format("0x{:08X}:{}:0x{:08X}", entry.address,
                        PatchEngine::PatchTypeAsString(entry.type), entry.value);
   }
+}
+
+static bool IsEnabledMusicCode(const Patch& patch)
+{
+  if (NetPlay::IsNetPlayRunning() && SConfig::GetInstance()->IsMusicOff() && patch.name == "[P+] Music Off")
+  {
+	return true;
+  }
+  else
+  {
+	return false;
+  }
+
+}
+
+static bool IsDisabledMusicCode(const Patch& patch)
+{
+  return false;
 }
 
 void LoadPatchSection(const std::string& section, std::vector<Patch>* patches,
@@ -206,7 +225,7 @@ static void ApplyPatches(const Core::CPUThreadGuard& guard, const std::vector<Pa
 {
   for (const Patch& patch : patches)
   {
-    if (patch.enabled)
+    if (patch.active && !IsDisabledMusicCode(patch) || IsEnabledMusicCode(patch))
     {
       for (const PatchEntry& entry : patch.entries)
       {
