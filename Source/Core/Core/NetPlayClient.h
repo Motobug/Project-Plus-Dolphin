@@ -63,7 +63,8 @@ public:
   virtual void OnMsgPowerButton() = 0;
   virtual void OnPlayerConnect(const std::string& player) = 0;
   virtual void OnPlayerDisconnect(const std::string& player) = 0;
-  virtual void OnPadBufferChanged(u32 buffer) = 0;
+  virtual void OnMinimumPadBufferChanged(u32 buffer) = 0;
+  virtual void OnPlayerPadBufferChanged(u32 buffer) = 0;
   virtual void OnHostInputAuthorityChanged(bool enabled) = 0;
   virtual void OnDesync(u32 frame, const std::string& player) = 0;
   virtual void OnConnectionLost() = 0;
@@ -103,6 +104,7 @@ public:
   std::string name;
   std::string revision;
   u32 ping = 0;
+  u32 buffer = 0;
   SyncIdentifierComparison game_status = SyncIdentifierComparison::Unknown;
 
   bool IsHost() const { return pid == 1; }
@@ -167,12 +169,40 @@ public:
 
   static void SendTimeBase();
   bool DoAllPlayersHaveGame();
+  
+  void AdjustPlayerPadBufferSize(u32 buffer);
+
+  // the number of ticks in-between frames
+  constexpr static int buffer_accuracy = 4;
+
+  inline u32 BufferSizeForPort(int pad) const
+  {
+    if (m_pad_map[pad] <= 0)
+      return 0;
+
+    return std::max(m_minimum_buffer_size, m_players.at(m_pad_map.at(pad)).buffer);
+  }
+
+  // used for chat, not the best place for it
+  inline std::string FindPlayerPadName(const Player* player) const
+  {
+    for (int i = 0; i < 4; i++)
+    {
+      if (m_pad_map[i] == player->pid)
+        return " (port " + std::to_string(i + 1) + ")";
+    }
+
+    return "";
+  }
+
+  NetPlayUI* dialog = nullptr;
+  Player* local_player = nullptr;
 
   const PadMappingArray& GetPadMapping() const;
   const GBAConfigArray& GetGBAConfig() const;
   const PadMappingArray& GetWiimoteMapping() const;
 
-  void AdjustPadBufferSize(unsigned int size);
+  void AdjustMinimumPadBufferSize(unsigned int size);
 
   void SetWiiSyncData(std::unique_ptr<IOS::HLE::FS::FileSystem> fs, std::vector<u64> titles,
                       std::string redirect_folder);
@@ -221,7 +251,7 @@ protected:
   // try to keep in-flight to the other clients. In host input authority mode, this is how
   // many incoming input packets need to be queued up before the client starts
   // speeding up the game to drain the buffer.
-  unsigned int m_target_buffer_size = 20;
+  unsigned int m_minimum_buffer_size = 2;
   bool m_host_input_authority = false;
   PlayerId m_current_golfer = 1;
 
@@ -289,7 +319,8 @@ private:
   void OnPadData(sf::Packet& packet);
   void OnPadHostData(sf::Packet& packet);
   void OnWiimoteData(sf::Packet& packet);
-  void OnPadBuffer(sf::Packet& packet);
+  void OnPadBufferMinimum(sf::Packet& packet);
+  void OnPadBufferPlayer(sf::Packet& packet);
   void OnHostInputAuthority(sf::Packet& packet);
   void OnGolfSwitch(sf::Packet& packet);
   void OnGolfPrepare(sf::Packet& packet);
@@ -357,4 +388,6 @@ void NetPlay_Enable(NetPlayClient* const np);
 void NetPlay_Disable();
 bool NetPlay_GetWiimoteData(const std::span<NetPlayClient::WiimoteDataBatchEntry>& entries);
 unsigned int NetPlay_GetLocalWiimoteForSlot(unsigned int slot);
+
+extern NetPlayClient* netplay_client;
 }  // namespace NetPlay

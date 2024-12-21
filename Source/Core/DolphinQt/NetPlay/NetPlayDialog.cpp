@@ -134,8 +134,10 @@ void NetPlayDialog::CreateMainLayout()
   m_main_layout = new QGridLayout;
   m_game_button = new QPushButton;
   m_start_button = new QPushButton(tr("Start"));
-  m_buffer_size_box = new QSpinBox;
-  m_buffer_label = new QLabel(tr("Buffer:"));
+  m_minimum_buffer_size_box = new QSpinBox;
+  m_minimum_buffer_label = new QLabel(tr("Minimum Buffer:"));
+  m_player_buffer_size_box = new QSpinBox;
+  m_player_buffer_label = new QLabel(tr("Buffer:"));
   m_quit_button = new QPushButton(tr("Quit"));
   m_splitter = new QSplitter(Qt::Horizontal);
   m_menu_bar = new QMenuBar(this);
@@ -259,9 +261,11 @@ void NetPlayDialog::CreateMainLayout()
   auto* options_widget = new QGridLayout;
 
   options_widget->addWidget(m_start_button, 0, 0, Qt::AlignVCenter);
-  options_widget->addWidget(m_buffer_label, 0, 1, Qt::AlignVCenter);
-  options_widget->addWidget(m_buffer_size_box, 0, 2, Qt::AlignVCenter);
-  options_widget->addWidget(m_quit_button, 0, 3, Qt::AlignVCenter | Qt::AlignRight);
+  options_widget->addWidget(m_minimum_buffer_label, 0, 1, Qt::AlignVCenter);
+  options_widget->addWidget(m_minimum_buffer_size_box, 0, 2, Qt::AlignVCenter);
+  options_widget->addWidget(m_player_buffer_label, 0, 3, Qt::AlignVCenter);
+  options_widget->addWidget(m_player_buffer_size_box, 0, 4, Qt::AlignVCenter);
+  options_widget->addWidget(m_quit_button, 0, 5, Qt::AlignVCenter | Qt::AlignRight);
   options_widget->setColumnStretch(3, 1000);
 
   m_main_layout->addLayout(options_widget, 2, 0, 1, -1, Qt::AlignRight);
@@ -362,18 +366,24 @@ void NetPlayDialog::ConnectWidgets()
           [this] { m_chat_send_button->setEnabled(!m_chat_type_edit->text().isEmpty()); });
 
   // Other
-  connect(m_buffer_size_box, &QSpinBox::valueChanged, [this](int value) {
-    if (value == m_buffer_size)
+  connect(m_minimum_buffer_size_box, &QSpinBox::valueChanged, [this](int value) {
+    if (value == m_minimum_buffer_size)
       return;
 
     auto client = Settings::Instance().GetNetPlayClient();
     auto server = Settings::Instance().GetNetPlayServer();
     if (server && !m_host_input_authority)
-      server->AdjustPadBufferSize(value);
+      server->AdjustMinimumPadBufferSize(value);
     else
-      client->AdjustPadBufferSize(value);
+      client->AdjustMinimumPadBufferSize(value);
   });
 
+  connect(m_player_buffer_size_box, &QSpinBox::valueChanged, [this](int value) {
+    if (value == m_player_buffer_size)
+      return;
+    auto client = Settings::Instance().GetNetPlayClient();
+      client->AdjustPlayerPadBufferSize(value);
+  });
   const auto hia_function = [this](bool enable) {
     if (m_host_input_authority != enable)
     {
@@ -423,7 +433,8 @@ void NetPlayDialog::ConnectWidgets()
 
   // SaveSettings() - Save Hosting-Dialog Settings
 
-  connect(m_buffer_size_box, &QSpinBox::valueChanged, this, &NetPlayDialog::SaveSettings);
+  connect(m_minimum_buffer_size_box, &QSpinBox::valueChanged, this, &NetPlayDialog::SaveSettings);
+  connect(m_player_buffer_size_box, &QSpinBox::valueChanged, this, &NetPlayDialog::SaveSettings);
   connect(m_savedata_none_action, &QAction::toggled, this, &NetPlayDialog::SaveSettings);
   connect(m_savedata_load_only_action, &QAction::toggled, this, &NetPlayDialog::SaveSettings);
   connect(m_savedata_load_and_write_action, &QAction::toggled, this, &NetPlayDialog::SaveSettings);
@@ -517,7 +528,8 @@ void NetPlayDialog::show(std::string nickname, bool use_traversal)
 {
   m_nickname = nickname;
   m_use_traversal = use_traversal;
-  m_buffer_size = 0;
+  m_minimum_buffer_size = 0;
+  m_player_buffer_size = 0;
   m_old_player_count = 0;
 
   m_room_box->clear();
@@ -935,17 +947,30 @@ void NetPlayDialog::OnPlayerDisconnect(const std::string& player)
   DisplayMessage(tr("%1 has left").arg(QString::fromStdString(player)), "darkcyan");
 }
 
-void NetPlayDialog::OnPadBufferChanged(u32 buffer)
+void NetPlayDialog::OnMinimumPadBufferChanged(u32 buffer)
 {
   QueueOnObject(this, [this, buffer] {
-    const QSignalBlocker blocker(m_buffer_size_box);
-    m_buffer_size_box->setValue(buffer);
+    const QSignalBlocker blocker(m_minimum_buffer_size_box);
+    m_minimum_buffer_size_box->setValue(buffer);
   });
   DisplayMessage(m_host_input_authority ? tr("Max buffer size changed to %1").arg(buffer) :
-                                          tr("Buffer size changed to %1").arg(buffer),
+                                          tr("Minimum buffer size changed to %1").arg(buffer),
                  "darkcyan");
 
-  m_buffer_size = static_cast<int>(buffer);
+  m_minimum_buffer_size = static_cast<int>(buffer);
+}
+
+void NetPlayDialog::OnPlayerPadBufferChanged(u32 buffer)
+{
+  QueueOnObject(this, [this, buffer] {
+    const QSignalBlocker blocker(m_player_buffer_size_box);
+    m_player_buffer_size_box->setValue(buffer);
+  });
+  DisplayMessage(m_host_input_authority ? tr("Max buffer size changed to %1").arg(buffer) :
+                                          tr("Player buffer size changed to %1").arg(buffer),
+                 "darkcyan");
+
+  m_player_buffer_size = static_cast<int>(buffer);
 }
 
 void NetPlayDialog::OnHostInputAuthorityChanged(bool enabled)
@@ -960,24 +985,24 @@ void NetPlayDialog::OnHostInputAuthorityChanged(bool enabled)
 
     if (is_hosting)
     {
-      m_buffer_size_box->setEnabled(enable_buffer);
-      m_buffer_label->setEnabled(enable_buffer);
-      m_buffer_size_box->setHidden(false);
-      m_buffer_label->setHidden(false);
+      m_minimum_buffer_size_box->setEnabled(enable_buffer);
+      m_minimum_buffer_label->setEnabled(enable_buffer);
+      m_minimum_buffer_size_box->setHidden(false);
+      m_minimum_buffer_label->setHidden(false);
     }
     else
     {
-      m_buffer_size_box->setEnabled(true);
-      m_buffer_label->setEnabled(true);
-      m_buffer_size_box->setHidden(!enable_buffer);
-      m_buffer_label->setHidden(!enable_buffer);
+      m_minimum_buffer_size_box->setEnabled(true);
+      m_minimum_buffer_label->setEnabled(true);
+      m_minimum_buffer_size_box->setHidden(!enable_buffer);
+      m_minimum_buffer_label->setHidden(!enable_buffer);
     }
 
-    m_buffer_label->setText(enabled ? tr("Max Buffer:") : tr("Buffer:"));
+    m_minimum_buffer_label->setText(enabled ? tr("Max Buffer:") : tr("Buffer:"));
     if (enabled)
     {
-      const QSignalBlocker blocker(m_buffer_size_box);
-      m_buffer_size_box->setValue(Config::Get(Config::NETPLAY_CLIENT_BUFFER_SIZE));
+      const QSignalBlocker blocker(m_minimum_buffer_size_box);
+      m_minimum_buffer_size_box->setValue(Config::Get(Config::NETPLAY_CLIENT_BUFFER_SIZE));
     }
   });
 }
@@ -1048,8 +1073,8 @@ void NetPlayDialog::OnGolferChanged(const bool is_golfer, const std::string& gol
   if (m_host_input_authority)
   {
     QueueOnObject(this, [this, is_golfer] {
-      m_buffer_size_box->setEnabled(!is_golfer);
-      m_buffer_label->setEnabled(!is_golfer);
+      m_minimum_buffer_size_box->setEnabled(!is_golfer);
+      m_minimum_buffer_label->setEnabled(!is_golfer);
     });
   }
 
@@ -1143,7 +1168,8 @@ std::string NetPlayDialog::FindGBARomPath(const std::array<u8, 20>& hash, std::s
 
 void NetPlayDialog::LoadSettings()
 {
-  const int buffer_size = Config::Get(Config::NETPLAY_BUFFER_SIZE);
+  const int minimum_buffer_size = Config::Get(Config::NETPLAY_MINIMUM_BUFFER_SIZE);
+  const int player_buffer_size = Config::Get(Config::NETPLAY_PLAYER_BUFFER_SIZE);
   const bool savedata_load = Config::Get(Config::NETPLAY_SAVEDATA_LOAD);
   const bool savedata_write = Config::Get(Config::NETPLAY_SAVEDATA_WRITE);
   const bool sync_all_wii_saves = Config::Get(Config::NETPLAY_SAVEDATA_SYNC_ALL_WII);
@@ -1153,7 +1179,8 @@ void NetPlayDialog::LoadSettings()
   const bool golf_mode_overlay = Config::Get(Config::NETPLAY_GOLF_MODE_OVERLAY);
   const bool hide_remote_gbas = Config::Get(Config::NETPLAY_HIDE_REMOTE_GBAS);
 
-  m_buffer_size_box->setValue(buffer_size);
+  m_minimum_buffer_size_box->setValue(minimum_buffer_size);
+  m_player_buffer_size_box->setValue(player_buffer_size);
 
   if (!savedata_load)
     m_savedata_none_action->setChecked(true);
@@ -1195,9 +1222,9 @@ void NetPlayDialog::SaveSettings()
   Config::ConfigChangeCallbackGuard config_guard;
 
   if (m_host_input_authority)
-    Config::SetBase(Config::NETPLAY_CLIENT_BUFFER_SIZE, m_buffer_size_box->value());
+    Config::SetBase(Config::NETPLAY_CLIENT_BUFFER_SIZE, m_minimum_buffer_size_box->value());
   else
-    Config::SetBase(Config::NETPLAY_BUFFER_SIZE, m_buffer_size_box->value());
+    Config::SetBase(Config::NETPLAY_MINIMUM_BUFFER_SIZE, m_minimum_buffer_size_box->value());
 
   const bool write_savedata = m_savedata_load_and_write_action->isChecked();
   const bool load_savedata = write_savedata || m_savedata_load_only_action->isChecked();

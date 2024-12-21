@@ -148,9 +148,10 @@ enum class MessageID : u8
 
   PadData = 0x60,
   PadMapping = 0x61,
-  PadBuffer = 0x62,
+  PadBufferMinimum = 0x62,
   PadHostData = 0x63,
   GBAConfig = 0x64,
+  PadBufferPlayer = 0x66,
 
   WiimoteData = 0x70,
   WiimoteMapping = 0x71,

@@ -62,7 +62,8 @@ public:
   void OnMsgPowerButton() override;
   void OnPlayerConnect(const std::string& player) override;
   void OnPlayerDisconnect(const std::string& player) override;
-  void OnPadBufferChanged(u32 buffer) override;
+  void OnMinimumPadBufferChanged(u32 buffer) override;
+  void OnPlayerPadBufferChanged(u32 buffer) override;
   void OnHostInputAuthorityChanged(bool enabled) override;
   void OnDesync(u32 frame, const std::string& player) override;
   void OnConnectionLost() override;
@@ -141,8 +142,10 @@ private:
   QMenu* m_other_menu;
   QPushButton* m_game_button;
   QPushButton* m_start_button;
-  QLabel* m_buffer_label;
-  QSpinBox* m_buffer_size_box;
+  QLabel* m_minimum_buffer_label;
+  QSpinBox* m_minimum_buffer_size_box;
+  QLabel* m_player_buffer_label;
+  QSpinBox* m_player_buffer_size_box;
 
   QActionGroup* m_savedata_style_group;
   QAction* m_savedata_none_action;
@@ -174,7 +177,8 @@ private:
   bool m_use_traversal = false;
   bool m_is_copy_button_retry = false;
   bool m_got_stop_request = true;
-  int m_buffer_size = 0;
+  int m_minimum_buffer_size = 0;
+  int m_player_buffer_size = 0;
   int m_player_count = 0;
   int m_old_player_count = 0;
   bool m_host_input_authority = false;

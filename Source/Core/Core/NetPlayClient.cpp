@@ -41,6 +41,7 @@
 #include "Core/Config/SessionSettings.h"
 #include "Core/Config/WiimoteSettings.h"
 #include "Core/ConfigManager.h"
+#include "Core/Core.h"
 #include "Core/GeckoCode.h"
 #include "Core/HW/EXI/EXI.h"
 #include "Core/HW/EXI/EXI_DeviceIPL.h"
@@ -82,7 +83,7 @@ namespace NetPlay
 using namespace WiimoteCommon;
 
 static std::mutex crit_netplay_client;
-static NetPlayClient* netplay_client = nullptr;
+NetPlayClient* netplay_client = nullptr;
 static bool s_si_poll_batching = false;
 
 // called from ---GUI--- thread
@@ -247,11 +248,11 @@ bool NetPlayClient::Connect()
   INFO_LOG_FMT(NETPLAY, "Connecting to server.");
 
   // send connect message
-  sf::Packet packet;
-  packet << Common::GetScmRevGitStr();
-  packet << Common::GetNetplayDolphinVer();
-  packet << m_player_name;
-  Send(packet);
+  sf::Packet spac;
+  spac << Common::GetScmRevGitStr();
+  spac << Common::GetNetplayDolphinVer();
+  spac << m_player_name;
+  Send(spac);
   enet_host_flush(m_client);
   sf::Packet rpac;
   // TODO: make this not hang
@@ -309,17 +310,43 @@ bool NetPlayClient::Connect()
     player.name = m_player_name;
     player.pid = m_pid;
     player.revision = Common::GetNetplayDolphinVer();
+    player.buffer = 0 /* will be raised once we get the packet */;
 
     // add self to player list
     m_players[m_pid] = player;
     m_local_player = &m_players[m_pid];
 
-    m_dialog->Update();
+    dialog->Update();
 
     m_is_connected = true;
 
     return true;
   }
+}
+
+// called from ---GUI--- and ---NETPLAY--- thread
+void NetPlayClient::AdjustPlayerPadBufferSize(u32 buffer)
+{
+  std::lock_guard<std::recursive_mutex> lkp(m_crit.players);
+
+  local_player->buffer = buffer;
+  if (local_player->buffer < m_minimum_buffer_size)
+    local_player->buffer = m_minimum_buffer_size;
+  
+  // need to rewrite this area
+  
+  /* auto spac = std::make_unique<sf::Packet>();
+  *spac << static_cast <MessageID>(OnPadBufferPlayer);
+  *spac << local_player->buffer;
+  SendAsync(std::move(spac)); */ 
+
+  dialog->OnPlayerPadBufferChanged(local_player->buffer);
+}
+
+void NetPlayClient::AdjustMinimumPadBufferSize(const unsigned int size)
+{
+  m_minimum_buffer_size = size;
+  m_dialog->OnMinimumPadBufferChanged(size);
 }
 
 static void ReceiveSyncIdentifier(sf::Packet& spac, SyncIdentifier& sync_identifier)
@@ -400,8 +427,12 @@ void NetPlayClient::OnData(sf::Packet& packet)
     OnWiimoteData(packet);
     break;
 
-  case MessageID::PadBuffer:
-    OnPadBuffer(packet);
+  case MessageID::PadBufferMinimum:
+    OnPadBufferMinimum(packet);
+    break;
+    
+  case MessageID::PadBufferPlayer:
+    OnPadBufferPlayer(packet);
     break;
 
   case MessageID::HostInputAuthority:
@@ -751,13 +782,28 @@ void NetPlayClient::OnWiimoteData(sf::Packet& packet)
   }
 }
 
-void NetPlayClient::OnPadBuffer(sf::Packet& packet)
+void NetPlayClient::OnPadBufferMinimum(sf::Packet& packet)
 {
   u32 size = 0;
   packet >> size;
+  
+  m_minimum_buffer_size = size;
+    dialog->OnMinimumPadBufferChanged(size);
 
-  m_target_buffer_size = size;
-  m_dialog->OnPadBufferChanged(size);
+    if (local_player->buffer < m_minimum_buffer_size)
+      AdjustPlayerPadBufferSize(m_minimum_buffer_size);
+}
+
+
+void NetPlayClient::OnPadBufferPlayer(sf::Packet& packet)
+{
+    PlayerId pid;
+    packet >> pid;
+
+    {
+      std::lock_guard<std::recursive_mutex> lkp(m_crit.players);
+      packet >> m_players[pid].buffer;
+    }
 }
 
 void NetPlayClient::OnHostInputAuthority(sf::Packet& packet)
@@ -2084,7 +2130,7 @@ bool NetPlayClient::GetNetPads(const int pad_nb, const bool batching, GCPadStatu
       // we toggle the emulation speed too quickly, so to prevent this
       // we wait until the buffer has been over for at least 1 second.
 
-      const bool buffer_over_target = m_pad_buffer[pad_nb].Size() > m_target_buffer_size + 1;
+      const bool buffer_over_target = m_pad_buffer[pad_nb].Size() > m_minimum_buffer_size + 1;
       if (!buffer_over_target)
         m_buffer_under_target_last = std::chrono::steady_clock::now();
 
@@ -2214,7 +2260,7 @@ bool NetPlayClient::PollLocalPad(const int local_pad, sf::Packet& packet)
   {
     // adjust the buffer either up or down
     // inserting multiple padstates or dropping states
-    while (m_pad_buffer[ingame_pad].Size() <= m_target_buffer_size)
+    while (m_pad_buffer[ingame_pad].Size() <= m_minimum_buffer_size)
     {
       // add to buffer
       m_pad_buffer[ingame_pad].Push(pad_status);
@@ -2237,7 +2283,7 @@ bool NetPlayClient::AddLocalWiimoteToBuffer(const int local_wiimote,
 
   // adjust the buffer either up or down
   // inserting multiple padstates or dropping states
-  while (m_wiimote_buffer[ingame_pad].Size() <= m_target_buffer_size)
+  while (m_wiimote_buffer[ingame_pad].Size() <= m_minimum_buffer_size)
   {
     // add to buffer
     m_wiimote_buffer[ingame_pad].Push(state);
@@ -2634,12 +2680,6 @@ const GBAConfigArray& NetPlayClient::GetGBAConfig() const
 const PadMappingArray& NetPlayClient::GetWiimoteMapping() const
 {
   return m_wiimote_map;
-}
-
-void NetPlayClient::AdjustPadBufferSize(const unsigned int size)
-{
-  m_target_buffer_size = size;
-  m_dialog->OnPadBufferChanged(size);
 }
 
 void NetPlayClient::SetWiiSyncData(std::unique_ptr<IOS::HLE::FS::FileSystem> fs,

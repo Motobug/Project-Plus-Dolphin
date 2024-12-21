@@ -21,6 +21,7 @@
 #include "Common/SPSCQueue.h"
 #include "Common/Timer.h"
 #include "Common/TraversalClient.h"
+#include "Core/NetPlayClient.h"
 #include "Core/NetPlayProto.h"
 #include "Core/SyncIdentifier.h"
 #include "InputCommon/GCPadStatus.h"
@@ -66,7 +67,7 @@ public:
   PadMappingArray GetWiimoteMapping() const;
   void SetWiimoteMapping(const PadMappingArray& mappings);
 
-  void AdjustPadBufferSize(unsigned int size);
+  void AdjustMinimumPadBufferSize(unsigned int size);
   void SetHostInputAuthority(bool enable);
 
   void KickPlayer(PlayerId player);
@@ -92,6 +93,7 @@ private:
     ENetPeer* socket = nullptr;
     u32 ping = 0;
     u32 current_game = 0;
+    unsigned int m_player_buffer_size = 0;
 
     Common::QoSSession qos_session;
 
@@ -170,7 +172,7 @@ private:
   u32 m_ping_key = 0;
   bool m_update_pings = false;
   u32 m_current_game = 0;
-  unsigned int m_target_buffer_size = 0;
+  unsigned int m_minimum_buffer_size = 0;
   PadMappingArray m_pad_map;
   GBAConfigArray m_gba_config;
   PadMappingArray m_wiimote_map;

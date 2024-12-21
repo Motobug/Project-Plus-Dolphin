@@ -43,7 +43,8 @@ const Info<bool> NETPLAY_ENABLE_CHUNKED_UPLOAD_LIMIT{
     {System::Main, "NetPlay", "EnableChunkedUploadLimit"}, false};
 const Info<u32> NETPLAY_CHUNKED_UPLOAD_LIMIT{{System::Main, "NetPlay", "ChunkedUploadLimit"}, 3000};
 
-const Info<u32> NETPLAY_BUFFER_SIZE{{System::Main, "NetPlay", "BufferSize"}, 2};
+const Info<u32> NETPLAY_MINIMUM_BUFFER_SIZE{{System::Main, "NetPlay", "MinimumBufferSize"}, 2};
+const Info<u32> NETPLAY_PLAYER_BUFFER_SIZE{{System::Main, "NetPlay", "PlayerBufferSize"}, 2};
 const Info<u32> NETPLAY_CLIENT_BUFFER_SIZE{{System::Main, "NetPlay", "BufferSizeClient"}, 1};
 
 const Info<bool> NETPLAY_SAVEDATA_LOAD{{System::Main, "NetPlay", "SyncSaves"}, true};

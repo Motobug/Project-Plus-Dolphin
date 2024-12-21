@@ -168,7 +168,7 @@ NetPlayServer::NetPlayServer(const u16 port, const bool forward_port, NetPlayUI*
     is_connected = true;
     m_do_loop = true;
     m_thread = std::thread(&NetPlayServer::ThreadFunc, this);
-    m_target_buffer_size = 2;
+    m_minimum_buffer_size = 2;
     m_chunked_data_thread = std::thread(&NetPlayServer::ChunkedDataThreadFunc, this);
 
 #ifdef USE_UPNP
@@ -483,7 +483,7 @@ ConnectionError NetPlayServer::OnConnect(ENetPeer* incoming_connection, sf::Pack
   }
 
   if (!m_host_input_authority)
-    SendResponseToPlayer(new_player, MessageID::PadBuffer, m_target_buffer_size);
+    SendResponseToPlayer(new_player, MessageID::PadBufferMinimum, m_minimum_buffer_size);
 
   SendResponseToPlayer(new_player, MessageID::HostInputAuthority, m_host_input_authority);
 
@@ -668,19 +668,19 @@ void NetPlayServer::UpdateWiimoteMapping()
 }
 
 // called from ---GUI--- thread and ---NETPLAY--- thread
-void NetPlayServer::AdjustPadBufferSize(unsigned int size)
+void NetPlayServer::AdjustMinimumPadBufferSize(unsigned int size)
 {
   std::lock_guard lkg(m_crit.game);
 
-  m_target_buffer_size = size;
+  m_minimum_buffer_size = size;
 
   // not needed on clients with host input authority
   if (!m_host_input_authority)
   {
     // tell clients to change buffer size
     sf::Packet spac;
-    spac << MessageID::PadBuffer;
-    spac << m_target_buffer_size;
+    spac << MessageID::PadBufferMinimum;
+    spac << m_minimum_buffer_size;
 
     SendAsyncToClients(std::move(spac));
   }
@@ -701,7 +701,7 @@ void NetPlayServer::SetHostInputAuthority(const bool enable)
 
   // resend pad buffer to clients when disabled
   if (!m_host_input_authority)
-    AdjustPadBufferSize(m_target_buffer_size);
+    AdjustMinimumPadBufferSize(m_minimum_buffer_size);
 }
 
 void NetPlayServer::SendAsync(sf::Packet&& packet, const PlayerId pid, const u8 channel_id)
@@ -1567,7 +1567,7 @@ bool NetPlayServer::StartGame()
 
   // no change, just update with clients
   if (!m_host_input_authority)
-    AdjustPadBufferSize(m_target_buffer_size);
+    AdjustMinimumPadBufferSize(m_minimum_buffer_size);
 
   m_current_golfer = 1;
   m_pending_golfer = 0;
