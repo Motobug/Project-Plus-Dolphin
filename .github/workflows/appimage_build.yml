@@ -16,7 +16,7 @@ jobs:
     - name: Checkout Upstream Repo
       uses: actions/checkout@v4
       with:
-        repository: dolphin-emu/dolphin
+        repository: Motobug/Project-Plus-Dolphin
         ref: master
 
     - name: Checkout Submodules
