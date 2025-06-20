@@ -854,7 +854,7 @@ add_subdirectory(Source)
 #
 if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin|Windows")
   install(DIRECTORY Data/Sys/ DESTINATION ${datadir}/sys PATTERN)
-  install(DIRECTORY Data/User/ DESTINATION ${datadir}/user PATTERN)
+  install(DIRECTORY Data/user/ DESTINATION ${datadir}/user PATTERN)
 endif()
 if(NOT CMAKE_SYSTEM_NAME MATCHES "Linux|FreeBSD|OpenBSD|Darwin")
   install(FILES Data/license.txt DESTINATION ${datadir})
