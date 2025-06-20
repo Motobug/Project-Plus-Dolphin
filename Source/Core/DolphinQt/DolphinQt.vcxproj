@@ -515,7 +515,7 @@
     <DataSysFiles Include="$(DolphinRootDir)Data\**\Games\**\*.*" />
 	<DataSysFiles Include="$(DolphinRootDir)Data\**\Launcher\**\*.*" />
     <DataSysFiles Include="$(DolphinRootDir)Data\**\Sys\**\*.*" />
-    <DataUserFiles Include="$(DolphinRootDir)Data\**\User\**\*.*" />
+    <DataUserFiles Include="$(DolphinRootDir)Data\**\user\**\*.*" />
     <DataTxtFiles Include="$(DolphinRootDir)Data\license.txt" />
     <DataTxtFiles Include="$(DolphinRootDir)Data\portable.txt" />
     <BinaryFiles Include="$(TargetPath)" />

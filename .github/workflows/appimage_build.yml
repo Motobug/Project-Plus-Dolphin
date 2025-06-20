@@ -17,7 +17,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: Motobug/Project-Plus-Dolphin
-        ref: master
+        ref: git-actions
 
     - name: Checkout Submodules
       if: steps.cache-submodules.outputs.cache-hit != 'true'
