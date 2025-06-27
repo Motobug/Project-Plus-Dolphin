@@ -21,7 +21,7 @@ namespace Common
 
 const std::string& GetScmRevStr()
 {
-  static const std::string scm_rev_str = "Project+ Dolphin v3.1.2-mainline-beta.2"
+  static const std::string scm_rev_str = EMULATOR_NAME " "
 
 #ifdef __INTEL_COMPILER
       BUILD_TYPE_STR SCM_DESC_STR "-ICC";

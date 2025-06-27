@@ -142,12 +142,10 @@ jobs:
           TAG="$(git tag --points-at HEAD)"
           if [ ! -z "$TAG" ]; then
             SUFFIX="$TAG"
-          elif [ "$EVENT_NAME" == "pull_request" ]; then
+          else [ "$EVENT_NAME" == "pull_request" ]; then
             PR_TITLE=$(echo "${PR_TITLE}" | tr -cd '[a-zA-Z0-9[:space:]]_-')
             SUFFIX="pr[$PR_NUM]-sha[$PR_SHA]-title[$PR_TITLE"
             SUFFIX=$(printf "%.99s]" "$SUFFIX")
-          else
-            SUFFIX="sha[$(git rev-parse --short HEAD)]"
           fi
           APPNAME="ProjectPlus-$SUFFIX"
           mv build/Binaries/DolphinQt.app "$APPNAME.app"
