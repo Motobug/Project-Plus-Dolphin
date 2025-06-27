@@ -142,7 +142,7 @@ jobs:
           TAG="$(git tag --points-at HEAD)"
           if [ ! -z "$TAG" ]; then
             SUFFIX="$TAG"
-          else [ "$EVENT_NAME" == "pull_request" ]; then
+          else [ "$EVENT_NAME" == "pull_request" ]
             PR_TITLE=$(echo "${PR_TITLE}" | tr -cd '[a-zA-Z0-9[:space:]]_-')
             SUFFIX="pr[$PR_NUM]-sha[$PR_SHA]-title[$PR_TITLE"
             SUFFIX=$(printf "%.99s]" "$SUFFIX")
