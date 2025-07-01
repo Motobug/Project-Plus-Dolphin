@@ -82,7 +82,7 @@ const std::string& GetNetplayDolphinVer()
 int GetScmCommitsAheadMaster()
 {
   // Note this macro can be empty if the master branch does not exist.
-  return SCM_COMMITS_AHEAD_MASTER + 0;
+  return 0;
 }
 
 }  // namespace Common
